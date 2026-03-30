@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { SpinSession, WheelSegment } from "@/types/wheel";
+import type { SpinHistoryItem, SpinSession, WheelSegment } from "@/types/wheel";
 
 /** Spin the wheel and get a chore assignment. */
 export async function spin(): Promise<SpinSession> {
@@ -18,7 +18,7 @@ export async function skipSession(sessionId: string): Promise<void> {
 }
 
 /** Get spin history for the current user. */
-export async function getHistory(page = 1, perPage = 20): Promise<{ items: SpinSession[]; total: number }> {
+export async function getHistory(page = 1, perPage = 20): Promise<{ items: SpinHistoryItem[]; total: number }> {
   const response = await apiClient.get("/wheel/history", {
     params: { page, per_page: perPage },
   });

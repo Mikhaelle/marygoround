@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { SpinSession, WheelSegment } from "@/types/wheel";
+import type { SpinHistoryItem, SpinSession, WheelSegment } from "@/types/wheel";
 import * as wheelApi from "@/lib/api/wheel";
 
 /**
@@ -10,7 +10,7 @@ import * as wheelApi from "@/lib/api/wheel";
  */
 export function useWheel() {
   const [segments, setSegments] = useState<WheelSegment[]>([]);
-  const [history, setHistory] = useState<SpinSession[]>([]);
+  const [history, setHistory] = useState<SpinHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSpinning, setIsSpinning] = useState(false);
 
@@ -50,17 +50,17 @@ export function useWheel() {
   const completeSession = useCallback(
     async (sessionId: string) => {
       await wheelApi.completeSession(sessionId);
-      await fetchHistory();
+      await Promise.all([fetchHistory(), fetchSegments()]);
     },
-    [fetchHistory],
+    [fetchHistory, fetchSegments],
   );
 
   const skipSession = useCallback(
     async (sessionId: string) => {
       await wheelApi.skipSession(sessionId);
-      await fetchHistory();
+      await Promise.all([fetchHistory(), fetchSegments()]);
     },
-    [fetchHistory],
+    [fetchHistory, fetchSegments],
   );
 
   return {
