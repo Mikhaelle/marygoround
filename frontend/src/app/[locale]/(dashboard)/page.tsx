@@ -7,6 +7,7 @@ import { SpinningWheel } from "@/components/wheel/spinning-wheel";
 import { SpinButton } from "@/components/wheel/spin-button";
 import { SpinResultModal } from "@/components/wheel/spin-result-modal";
 import { SpinHistory } from "@/components/wheel/spin-history";
+import { ResetDailyButton } from "@/components/wheel/reset-daily-button";
 import type { SpinSession } from "@/types/wheel";
 import { toast } from "sonner";
 
@@ -21,6 +22,7 @@ export default function WheelPage() {
     spin,
     completeSession,
     skipSession,
+    resetDaily,
   } = useWheel();
 
   const [animatingSpinning, setAnimatingSpinning] = useState(false);
@@ -82,6 +84,41 @@ export default function WheelPage() {
     }
   }, [currentSession, skipSession, t]);
 
+  const handleHistoryComplete = useCallback(
+    async (sessionId: string) => {
+      try {
+        await completeSession(sessionId);
+        toast.success(t("spinSuccess"));
+      } catch {
+        toast.error(t("noChores"));
+      }
+    },
+    [completeSession, t],
+  );
+
+  const handleHistorySkip = useCallback(
+    async (sessionId: string) => {
+      try {
+        await skipSession(sessionId);
+        toast.info(t("spinSkipped"));
+      } catch {
+        toast.error(t("noChores"));
+      }
+    },
+    [skipSession, t],
+  );
+
+  const handleResetDaily = useCallback(async () => {
+    try {
+      await resetDaily();
+      toast.success(t("resetDailySuccess"));
+      setCurrentSession(null);
+      setShowResult(false);
+    } catch {
+      toast.error(t("noChores"));
+    }
+  }, [resetDaily, t]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -106,15 +143,19 @@ export default function WheelPage() {
             isSpinning={animatingSpinning || isSpinning}
             disabled={segments.length === 0}
           />
+          <ResetDailyButton
+            onReset={handleResetDaily}
+            disabled={animatingSpinning || isSpinning || history.length === 0}
+          />
         </div>
 
         <div className="hidden lg:block">
-          <SpinHistory history={history} />
+          <SpinHistory history={history} onComplete={handleHistoryComplete} onSkip={handleHistorySkip} />
         </div>
       </div>
 
       <div className="lg:hidden">
-        <SpinHistory history={history} />
+        <SpinHistory history={history} onComplete={handleHistoryComplete} onSkip={handleHistorySkip} />
       </div>
 
       <SpinResultModal

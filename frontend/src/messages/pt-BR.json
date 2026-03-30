@@ -63,7 +63,15 @@
     "noChores": "Nenhuma tarefa ainda. Adicione sua primeira tarefa!",
     "choreCreated": "Tarefa criada com sucesso",
     "choreUpdated": "Tarefa atualizada com sucesso",
-    "choreDeleted": "Tarefa excluida com sucesso"
+    "choreDeleted": "Tarefa excluida com sucesso",
+    "choreCompleted": "Tarefa concluida!",
+    "choreSkipped": "Tarefa pulada.",
+    "complete": "Concluir",
+    "skip": "Pular",
+    "done": "Feito",
+    "resetDaily": "Resetar Dia",
+    "resetDailySuccess": "Progresso do dia resetado!",
+    "resetDailyConfirm": "Tem certeza? Isso vai resetar todo o progresso de hoje."
   },
   "wheel": {
     "spin": "GIRAR",
@@ -80,7 +88,10 @@
     "recentSpins": "Giros Recentes",
     "noHistory": "Nenhum giro ainda. De uma girada!",
     "spinSuccess": "Tarefa concluida! Otimo trabalho!",
-    "spinSkipped": "Tarefa pulada."
+    "spinSkipped": "Tarefa pulada.",
+    "resetDaily": "Resetar Dia",
+    "resetDailyConfirm": "Tem certeza? Isso vai limpar todos os giros de hoje.",
+    "resetDailySuccess": "Roleta do dia resetada!"
   },
   "bucket": {
     "title": "Balde Adulto",

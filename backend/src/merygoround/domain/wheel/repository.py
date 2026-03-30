@@ -53,6 +53,49 @@ class SpinSessionRepository(ABC):
         """
 
     @abstractmethod
+    async def get_status_counts_for_date(
+        self, user_id: uuid.UUID, target_date: date
+    ) -> dict[uuid.UUID, dict[str, int]]:
+        """Return per-status counts per chore for the given date.
+
+        Args:
+            user_id: The UUID of the user.
+            target_date: The date to check.
+
+        Returns:
+            Dict mapping chore UUID to dict of status -> count.
+        """
+
+    @abstractmethod
+    async def delete_for_chore_on_date(
+        self, user_id: uuid.UUID, chore_id: uuid.UUID, target_date: date
+    ) -> int:
+        """Delete all spin sessions for a specific chore on the given date.
+
+        Args:
+            user_id: The UUID of the user.
+            chore_id: The UUID of the chore.
+            target_date: The date whose sessions should be removed.
+
+        Returns:
+            The number of deleted sessions.
+        """
+
+    @abstractmethod
+    async def delete_for_date(
+        self, user_id: uuid.UUID, target_date: date
+    ) -> int:
+        """Delete all spin sessions for a user on the given date.
+
+        Args:
+            user_id: The UUID of the user.
+            target_date: The date whose sessions should be removed.
+
+        Returns:
+            The number of deleted sessions.
+        """
+
+    @abstractmethod
     async def add(self, session: SpinSession) -> SpinSession:
         """Persist a new spin session.
 

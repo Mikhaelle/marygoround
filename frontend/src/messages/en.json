@@ -63,7 +63,15 @@
     "noChores": "No chores yet. Add your first chore to get started!",
     "choreCreated": "Chore created successfully",
     "choreUpdated": "Chore updated successfully",
-    "choreDeleted": "Chore deleted successfully"
+    "choreDeleted": "Chore deleted successfully",
+    "choreCompleted": "Chore completed!",
+    "choreSkipped": "Chore skipped.",
+    "complete": "Complete",
+    "skip": "Skip",
+    "done": "Done",
+    "resetDaily": "Reset Day",
+    "resetDailySuccess": "Daily progress reset!",
+    "resetDailyConfirm": "Are you sure? This will reset all of today's progress."
   },
   "wheel": {
     "spin": "SPIN",
@@ -80,7 +88,10 @@
     "recentSpins": "Recent Spins",
     "noHistory": "No spins yet. Give it a whirl!",
     "spinSuccess": "Chore completed! Great job!",
-    "spinSkipped": "Chore skipped."
+    "spinSkipped": "Chore skipped.",
+    "resetDaily": "Reset Day",
+    "resetDailyConfirm": "Are you sure? This will clear all of today's spins.",
+    "resetDailySuccess": "Daily wheel reset!"
   },
   "bucket": {
     "title": "Adult Bucket",

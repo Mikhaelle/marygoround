@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, time, timezone
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from merygoround.domain.wheel.entities import SpinSession, SpinStatus
@@ -74,14 +74,14 @@ class SqlAlchemySpinSessionRepository(SpinSessionRepository):
     async def get_completed_counts_for_date(
         self, user_id: uuid.UUID, target_date: date
     ) -> dict[uuid.UUID, int]:
-        """Return completion counts per chore for the given date.
+        """Return done counts (completed + skipped) per chore for the given date.
 
         Args:
             user_id: The UUID of the user.
             target_date: The date to check.
 
         Returns:
-            Dict mapping chore UUID to number of completions on that date.
+            Dict mapping chore UUID to number of done sessions on that date.
         """
         day_start = datetime.combine(target_date, time.min, tzinfo=timezone.utc)
         day_end = datetime.combine(target_date, time.max, tzinfo=timezone.utc)
@@ -94,7 +94,7 @@ class SqlAlchemySpinSessionRepository(SpinSessionRepository):
             .where(
                 and_(
                     SpinSessionModel.user_id == user_id,
-                    SpinSessionModel.status == "completed",
+                    SpinSessionModel.status.in_(["COMPLETED", "SKIPPED"]),
                     SpinSessionModel.completed_at >= day_start,
                     SpinSessionModel.completed_at <= day_end,
                 )
@@ -103,6 +103,102 @@ class SqlAlchemySpinSessionRepository(SpinSessionRepository):
         )
         result = await self._session.execute(stmt)
         return {row[0]: row[1] for row in result.all()}
+
+    async def get_status_counts_for_date(
+        self, user_id: uuid.UUID, target_date: date
+    ) -> dict[uuid.UUID, dict[str, int]]:
+        """Return per-status counts per chore for the given date.
+
+        Args:
+            user_id: The UUID of the user.
+            target_date: The date to check.
+
+        Returns:
+            Dict mapping chore UUID to dict of status -> count.
+        """
+        day_start = datetime.combine(target_date, time.min, tzinfo=timezone.utc)
+        day_end = datetime.combine(target_date, time.max, tzinfo=timezone.utc)
+
+        stmt = (
+            select(
+                SpinSessionModel.selected_chore_id,
+                SpinSessionModel.status,
+                func.count().label("cnt"),
+            )
+            .where(
+                and_(
+                    SpinSessionModel.user_id == user_id,
+                    SpinSessionModel.spun_at >= day_start,
+                    SpinSessionModel.spun_at <= day_end,
+                )
+            )
+            .group_by(SpinSessionModel.selected_chore_id, SpinSessionModel.status)
+        )
+        result = await self._session.execute(stmt)
+        counts: dict[uuid.UUID, dict[str, int]] = {}
+        for chore_id, status, cnt in result.all():
+            if chore_id not in counts:
+                counts[chore_id] = {}
+            counts[chore_id][status] = cnt
+        return counts
+
+    async def delete_for_chore_on_date(
+        self, user_id: uuid.UUID, chore_id: uuid.UUID, target_date: date
+    ) -> int:
+        """Delete all spin sessions for a specific chore on the given date.
+
+        Args:
+            user_id: The UUID of the user.
+            chore_id: The UUID of the chore.
+            target_date: The date whose sessions should be removed.
+
+        Returns:
+            The number of deleted sessions.
+        """
+        day_start = datetime.combine(target_date, time.min, tzinfo=timezone.utc)
+        day_end = datetime.combine(target_date, time.max, tzinfo=timezone.utc)
+
+        stmt = (
+            delete(SpinSessionModel)
+            .where(
+                and_(
+                    SpinSessionModel.user_id == user_id,
+                    SpinSessionModel.selected_chore_id == chore_id,
+                    SpinSessionModel.spun_at >= day_start,
+                    SpinSessionModel.spun_at <= day_end,
+                )
+            )
+        )
+        result = await self._session.execute(stmt)
+        return result.rowcount
+
+    async def delete_for_date(
+        self, user_id: uuid.UUID, target_date: date
+    ) -> int:
+        """Delete all spin sessions for a user on the given date.
+
+        Args:
+            user_id: The UUID of the user.
+            target_date: The date whose sessions should be removed.
+
+        Returns:
+            The number of deleted sessions.
+        """
+        day_start = datetime.combine(target_date, time.min, tzinfo=timezone.utc)
+        day_end = datetime.combine(target_date, time.max, tzinfo=timezone.utc)
+
+        stmt = (
+            delete(SpinSessionModel)
+            .where(
+                and_(
+                    SpinSessionModel.user_id == user_id,
+                    SpinSessionModel.spun_at >= day_start,
+                    SpinSessionModel.spun_at <= day_end,
+                )
+            )
+        )
+        result = await self._session.execute(stmt)
+        return result.rowcount
 
     async def add(self, session: SpinSession) -> SpinSession:
         """Persist a new spin session.

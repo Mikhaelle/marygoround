@@ -99,6 +99,53 @@ class GetWheelSegmentsQuery(BaseQuery[uuid.UUID, list[WheelSegmentResponse]]):
         return segments
 
 
+class GetDailyProgressQuery(BaseQuery[uuid.UUID, list["DailyProgressItem"]]):
+    """Returns daily completion/skip progress per chore.
+
+    Args:
+        chore_repo: Chore repository for loading user chores.
+        spin_repo: Spin session repository for checking today's counts.
+    """
+
+    def __init__(
+        self,
+        chore_repo: "ChoreRepository",
+        spin_repo: "SpinSessionRepository",
+    ) -> None:
+        self._chore_repo = chore_repo
+        self._spin_repo = spin_repo
+
+    async def execute(self, input_data: uuid.UUID) -> list["DailyProgressItem"]:
+        """Build daily progress for all user chores.
+
+        Args:
+            input_data: The UUID of the authenticated user.
+
+        Returns:
+            List of DailyProgressItem DTOs.
+        """
+        from merygoround.application.wheel.dtos import DailyProgressItem
+
+        chores = await self._chore_repo.get_by_user_id(input_data)
+        now = datetime.now(timezone.utc)
+        status_counts = await self._spin_repo.get_status_counts_for_date(
+            input_data, now.date()
+        )
+
+        items: list[DailyProgressItem] = []
+        for chore in chores:
+            counts = status_counts.get(chore.id, {})
+            items.append(
+                DailyProgressItem(
+                    chore_id=chore.id,
+                    completed=counts.get("COMPLETED", 0),
+                    skipped=counts.get("SKIPPED", 0),
+                    multiplicity=chore.wheel_config.multiplicity.value,
+                )
+            )
+        return items
+
+
 @dataclass
 class GetSpinHistoryInput:
     """Input for GetSpinHistoryQuery.

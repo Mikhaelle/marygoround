@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useChores } from "@/lib/hooks/use-chores";
 import { ChoreList } from "@/components/chores/chore-list";
@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { Chore, CreateChoreRequest } from "@/types/chore";
+import type { DailyProgressItem } from "@/types/wheel";
+import * as wheelApi from "@/lib/api/wheel";
 
 /** Chore management page with list, create/edit dialogs, and delete confirmation. */
 export default function ChoresPage() {
@@ -19,6 +21,20 @@ export default function ChoresPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingChore, setEditingChore] = useState<Chore | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Chore | null>(null);
+  const [progress, setProgress] = useState<DailyProgressItem[]>([]);
+
+  const fetchProgress = useCallback(async () => {
+    try {
+      const data = await wheelApi.getDailyProgress();
+      setProgress(data);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProgress();
+  }, [fetchProgress]);
 
   const handleAdd = useCallback(() => {
     setEditingChore(null);
@@ -42,11 +58,12 @@ export default function ChoresPage() {
         }
         setFormOpen(false);
         setEditingChore(null);
+        await fetchProgress();
       } catch {
         toast.error(tCommon("error"));
       }
     },
-    [editingChore, createChore, updateChore, t, tCommon],
+    [editingChore, createChore, updateChore, fetchProgress, t, tCommon],
   );
 
   const handleDelete = useCallback(
@@ -61,6 +78,55 @@ export default function ChoresPage() {
     },
     [deleteChore, t, tCommon],
   );
+
+  const handleComplete = useCallback(
+    async (choreId: string) => {
+      try {
+        await wheelApi.quickCompleteChore(choreId);
+        toast.success(t("choreCompleted"));
+        await fetchProgress();
+      } catch {
+        toast.error(tCommon("error"));
+      }
+    },
+    [fetchProgress, t, tCommon],
+  );
+
+  const handleSkip = useCallback(
+    async (choreId: string) => {
+      try {
+        await wheelApi.quickSkipChore(choreId);
+        toast.info(t("choreSkipped"));
+        await fetchProgress();
+      } catch {
+        toast.error(tCommon("error"));
+      }
+    },
+    [fetchProgress, t, tCommon],
+  );
+
+  const handleResetChore = useCallback(
+    async (choreId: string) => {
+      try {
+        await wheelApi.resetChore(choreId);
+        toast.success(t("resetDailySuccess"));
+        await fetchProgress();
+      } catch {
+        toast.error(tCommon("error"));
+      }
+    },
+    [fetchProgress, t, tCommon],
+  );
+
+  const handleResetDaily = useCallback(async () => {
+    try {
+      await wheelApi.resetDaily();
+      toast.success(t("resetDailySuccess"));
+      await fetchProgress();
+    } catch {
+      toast.error(tCommon("error"));
+    }
+  }, [fetchProgress, t, tCommon]);
 
   if (isLoading) {
     return (
@@ -78,9 +144,15 @@ export default function ChoresPage() {
 
       <ChoreList
         chores={chores}
+        progress={progress}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={(chore) => setDeleteTarget(chore)}
+        onComplete={handleComplete}
+        onSkip={handleSkip}
+        onResetChore={handleResetChore}
+        onResetDaily={handleResetDaily}
+        hasDailyProgress={progress.some((p) => p.completed > 0 || p.skipped > 0)}
       />
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>

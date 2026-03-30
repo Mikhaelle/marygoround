@@ -144,6 +144,182 @@ class SpinWheelCommand(BaseCommand[SpinWheelInput, SpinResultResponse]):
         )
 
 
+@dataclass
+class ResetDailyWheelInput:
+    """Input for ResetDailyWheelCommand.
+
+    Attributes:
+        user_id: The user requesting the reset.
+    """
+
+    user_id: uuid.UUID
+
+
+@dataclass
+class ResetChoreInput:
+    """Input for ResetChoreCommand.
+
+    Attributes:
+        user_id: The requesting user.
+        chore_id: The chore to reset.
+    """
+
+    user_id: uuid.UUID
+    chore_id: uuid.UUID
+
+
+class ResetChoreCommand(BaseCommand[ResetChoreInput, int]):
+    """Resets a specific chore for today by deleting its spin sessions.
+
+    Args:
+        spin_repo: Spin session repository for persistence.
+    """
+
+    def __init__(self, spin_repo: SpinSessionRepository) -> None:
+        self._spin_repo = spin_repo
+
+    async def execute(self, input_data: ResetChoreInput) -> int:
+        """Delete all spin sessions for a chore today.
+
+        Args:
+            input_data: Contains the user ID and chore ID.
+
+        Returns:
+            The number of deleted sessions.
+        """
+        today = datetime.now(timezone.utc).date()
+        return await self._spin_repo.delete_for_chore_on_date(
+            input_data.user_id, input_data.chore_id, today
+        )
+
+
+class ResetDailyWheelCommand(BaseCommand[ResetDailyWheelInput, int]):
+    """Resets the daily wheel by deleting all of today's spin sessions.
+
+    Args:
+        spin_repo: Spin session repository for persistence.
+    """
+
+    def __init__(self, spin_repo: SpinSessionRepository) -> None:
+        self._spin_repo = spin_repo
+
+    async def execute(self, input_data: ResetDailyWheelInput) -> int:
+        """Delete all spin sessions for today.
+
+        Args:
+            input_data: Contains the user ID.
+
+        Returns:
+            The number of deleted sessions.
+        """
+        today = datetime.now(timezone.utc).date()
+        return await self._spin_repo.delete_for_date(input_data.user_id, today)
+
+
+@dataclass
+class QuickCompleteChoreInput:
+    """Input for QuickCompleteChoreCommand.
+
+    Attributes:
+        user_id: The requesting user.
+        chore_id: The chore to mark as completed.
+    """
+
+    user_id: uuid.UUID
+    chore_id: uuid.UUID
+
+
+class QuickCompleteChoreCommand(BaseCommand[QuickCompleteChoreInput, None]):
+    """Creates a completed spin session for a chore directly (without spinning).
+
+    Args:
+        chore_repo: Chore repository for validation.
+        spin_repo: Spin session repository for persistence.
+    """
+
+    def __init__(
+        self, chore_repo: ChoreRepository, spin_repo: SpinSessionRepository
+    ) -> None:
+        self._chore_repo = chore_repo
+        self._spin_repo = spin_repo
+
+    async def execute(self, input_data: QuickCompleteChoreInput) -> None:
+        """Create a completed spin session for the given chore.
+
+        Args:
+            input_data: Contains the user ID and chore ID.
+
+        Raises:
+            EntityNotFoundError: If the chore does not exist.
+        """
+        chore = await self._chore_repo.get_by_id(input_data.chore_id)
+        if chore is None:
+            raise EntityNotFoundError("Chore", str(input_data.chore_id))
+
+        now = datetime.now(timezone.utc)
+        session = SpinSession(
+            user_id=input_data.user_id,
+            selected_chore_id=chore.id,
+            chore_name=chore.name,
+            spun_at=now,
+            completed_at=now,
+            status=SpinStatus.COMPLETED,
+        )
+        await self._spin_repo.add(session)
+
+
+@dataclass
+class QuickSkipChoreInput:
+    """Input for QuickSkipChoreCommand.
+
+    Attributes:
+        user_id: The requesting user.
+        chore_id: The chore to mark as skipped.
+    """
+
+    user_id: uuid.UUID
+    chore_id: uuid.UUID
+
+
+class QuickSkipChoreCommand(BaseCommand[QuickSkipChoreInput, None]):
+    """Creates a skipped spin session for a chore directly (without spinning).
+
+    Args:
+        chore_repo: Chore repository for validation.
+        spin_repo: Spin session repository for persistence.
+    """
+
+    def __init__(
+        self, chore_repo: ChoreRepository, spin_repo: SpinSessionRepository
+    ) -> None:
+        self._chore_repo = chore_repo
+        self._spin_repo = spin_repo
+
+    async def execute(self, input_data: QuickSkipChoreInput) -> None:
+        """Create a skipped spin session for the given chore.
+
+        Args:
+            input_data: Contains the user ID and chore ID.
+
+        Raises:
+            EntityNotFoundError: If the chore does not exist.
+        """
+        chore = await self._chore_repo.get_by_id(input_data.chore_id)
+        if chore is None:
+            raise EntityNotFoundError("Chore", str(input_data.chore_id))
+
+        now = datetime.now(timezone.utc)
+        session = SpinSession(
+            user_id=input_data.user_id,
+            selected_chore_id=chore.id,
+            chore_name=chore.name,
+            spun_at=now,
+            completed_at=now,
+            status=SpinStatus.SKIPPED,
+        )
+        await self._spin_repo.add(session)
+
+
 class CompleteSpinSessionCommand(BaseCommand[CompleteSpinInput, None]):
     """Marks a spin session as completed.
 

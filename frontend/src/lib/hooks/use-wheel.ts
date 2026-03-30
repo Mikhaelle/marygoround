@@ -63,6 +63,11 @@ export function useWheel() {
     [fetchHistory, fetchSegments],
   );
 
+  const resetDaily = useCallback(async () => {
+    await wheelApi.resetDaily();
+    await Promise.all([fetchHistory(), fetchSegments()]);
+  }, [fetchHistory, fetchSegments]);
+
   return {
     segments,
     history,
@@ -73,5 +78,6 @@ export function useWheel() {
     spin,
     completeSession,
     skipSession,
+    resetDaily,
   };
 }

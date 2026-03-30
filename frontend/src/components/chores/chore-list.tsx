@@ -5,27 +5,57 @@ import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChoreCard } from "./chore-card";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, RotateCcw } from "lucide-react";
 import type { Chore } from "@/types/chore";
+import type { DailyProgressItem } from "@/types/wheel";
 
 interface ChoreListProps {
   chores: Chore[];
+  progress: DailyProgressItem[];
   onAdd: () => void;
   onEdit: (chore: Chore) => void;
   onDelete: (chore: Chore) => void;
+  onComplete: (choreId: string) => void;
+  onSkip: (choreId: string) => void;
+  onResetChore: (choreId: string) => void;
+  onResetDaily: () => void;
+  hasDailyProgress: boolean;
 }
 
-/** Searchable grid of chore cards with an add button. */
-export function ChoreList({ chores, onAdd, onEdit, onDelete }: ChoreListProps) {
+/** Searchable grid of chore cards with add and reset buttons. */
+export function ChoreList({
+  chores,
+  progress,
+  onAdd,
+  onEdit,
+  onDelete,
+  onComplete,
+  onSkip,
+  onResetChore,
+  onResetDaily,
+  hasDailyProgress,
+}: ChoreListProps) {
   const t = useTranslations("chores");
   const tCommon = useTranslations("common");
   const [search, setSearch] = useState("");
+  const [confirmingReset, setConfirmingReset] = useState(false);
+
+  const progressMap = new Map(progress.map((p) => [p.chore_id, p]));
 
   const filteredChores = chores.filter(
     (chore) =>
       chore.name.toLowerCase().includes(search.toLowerCase()) ||
       chore.category?.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const handleResetClick = () => {
+    if (!confirmingReset) {
+      setConfirmingReset(true);
+      return;
+    }
+    onResetDaily();
+    setConfirmingReset(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -39,6 +69,18 @@ export function ChoreList({ chores, onAdd, onEdit, onDelete }: ChoreListProps) {
             className="pl-9"
           />
         </div>
+        {hasDailyProgress && (
+          <Button
+            variant={confirmingReset ? "destructive" : "outline"}
+            size="sm"
+            className="gap-1.5 shrink-0"
+            onClick={handleResetClick}
+            onBlur={() => setConfirmingReset(false)}
+          >
+            <RotateCcw className="size-3.5" />
+            {confirmingReset ? t("resetDailyConfirm") : t("resetDaily")}
+          </Button>
+        )}
         <Button
           onClick={onAdd}
           className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shrink-0"
@@ -55,7 +97,16 @@ export function ChoreList({ chores, onAdd, onEdit, onDelete }: ChoreListProps) {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filteredChores.map((chore) => (
-            <ChoreCard key={chore.id} chore={chore} onEdit={onEdit} onDelete={onDelete} />
+            <ChoreCard
+              key={chore.id}
+              chore={chore}
+              progress={progressMap.get(chore.id)}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onComplete={onComplete}
+              onSkip={onSkip}
+              onReset={onResetChore}
+            />
           ))}
         </div>
       )}

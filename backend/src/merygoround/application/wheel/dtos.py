@@ -76,6 +76,22 @@ class SpinHistoryResponse(BaseModel):
     per_page: int
 
 
+class DailyProgressItem(BaseModel):
+    """Daily progress for a single chore.
+
+    Attributes:
+        chore_id: ID of the chore.
+        completed: Number of completions today.
+        skipped: Number of skips today.
+        multiplicity: Total multiplicity for the chore.
+    """
+
+    chore_id: uuid.UUID
+    completed: int
+    skipped: int
+    multiplicity: int
+
+
 class SpinHistoryQuery(BaseModel):
     """Input DTO for spin history pagination.
 

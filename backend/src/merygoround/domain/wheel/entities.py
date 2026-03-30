@@ -13,9 +13,9 @@ from merygoround.domain.shared.entity import Entity
 class SpinStatus(enum.Enum):
     """Status of a spin session."""
 
-    PENDING = "pending"
-    COMPLETED = "completed"
-    SKIPPED = "skipped"
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    SKIPPED = "SKIPPED"
 
 
 @dataclass

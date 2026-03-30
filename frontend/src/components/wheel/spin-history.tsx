@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Check, SkipForward, Hourglass } from "lucide-react";
 import type { SpinHistoryItem } from "@/types/wheel";
@@ -10,10 +11,12 @@ import { formatDateTime } from "@/lib/utils/format";
 
 interface SpinHistoryProps {
   history: SpinHistoryItem[];
+  onComplete?: (sessionId: string) => void;
+  onSkip?: (sessionId: string) => void;
 }
 
-/** Displays recent spin sessions with their status. */
-export function SpinHistory({ history }: SpinHistoryProps) {
+/** Displays recent spin sessions with their status and actions for pending items. */
+export function SpinHistory({ history, onComplete, onSkip }: SpinHistoryProps) {
   const t = useTranslations("wheel");
   const locale = useLocale();
 
@@ -81,10 +84,30 @@ export function SpinHistory({ history }: SpinHistoryProps) {
                 {formatDateTime(item.spun_at, locale)}
               </div>
             </div>
-            <Badge variant={getStatusVariant(item.status)} className="gap-1 shrink-0">
-              {getStatusIcon(item.status)}
-              {getStatusLabel(item.status)}
-            </Badge>
+            {item.status === "PENDING" && onComplete && onSkip ? (
+              <div className="flex gap-1.5 shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => onSkip(item.id)}
+                >
+                  <SkipForward className="size-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => onComplete(item.id)}
+                >
+                  <Check className="size-3" />
+                </Button>
+              </div>
+            ) : (
+              <Badge variant={getStatusVariant(item.status)} className="gap-1 shrink-0">
+                {getStatusIcon(item.status)}
+                {getStatusLabel(item.status)}
+              </Badge>
+            )}
           </div>
         ))}
       </CardContent>

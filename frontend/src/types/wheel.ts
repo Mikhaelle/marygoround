@@ -25,6 +25,13 @@ export interface SpinHistoryResponse {
   per_page: number;
 }
 
+export interface DailyProgressItem {
+  chore_id: string;
+  completed: number;
+  skipped: number;
+  multiplicity: number;
+}
+
 export interface WheelSegment {
   chore_id: string;
   name: string;

@@ -4,22 +4,34 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Clock, Layers } from "lucide-react";
+import { Pencil, Trash2, Clock, Layers, Check, SkipForward, RotateCcw } from "lucide-react";
 import type { Chore } from "@/types/chore";
+import type { DailyProgressItem } from "@/types/wheel";
 import { formatDuration } from "@/lib/utils/format";
 
 interface ChoreCardProps {
   chore: Chore;
+  progress?: DailyProgressItem;
   onEdit: (chore: Chore) => void;
   onDelete: (chore: Chore) => void;
+  onComplete?: (choreId: string) => void;
+  onSkip?: (choreId: string) => void;
+  onReset?: (choreId: string) => void;
 }
 
-/** Card displaying a single chore with edit/delete actions. */
-export function ChoreCard({ chore, onEdit, onDelete }: ChoreCardProps) {
+/** Card displaying a single chore with complete/skip/reset actions. */
+export function ChoreCard({ chore, progress, onEdit, onDelete, onComplete, onSkip, onReset }: ChoreCardProps) {
   const t = useTranslations("chores");
 
+  const completed = progress?.completed ?? 0;
+  const skipped = progress?.skipped ?? 0;
+  const multiplicity = chore.wheel_config.multiplicity;
+  const done = completed + skipped;
+  const allDone = done >= multiplicity;
+  const hasDayProgress = done > 0;
+
   return (
-    <Card className="group hover:shadow-md transition-all duration-200 hover:border-indigo-200 dark:hover:border-indigo-800">
+    <Card className={`group hover:shadow-md transition-all duration-200 hover:border-indigo-200 dark:hover:border-indigo-800 ${allDone ? "opacity-60" : ""}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -30,13 +42,19 @@ export function ChoreCard({ chore, onEdit, onDelete }: ChoreCardProps) {
                 {formatDuration(chore.estimated_duration_minutes)}
               </Badge>
               {chore.category && <Badge variant="secondary">{chore.category}</Badge>}
-              {chore.wheel_config.multiplicity > 1 && (
+              {multiplicity > 1 && (
                 <Badge
                   variant="outline"
                   className="gap-1 border-amber-300 text-amber-700 dark:border-amber-600 dark:text-amber-400"
                 >
                   <Layers className="size-3" />
-                  {chore.wheel_config.multiplicity}x
+                  {completed}/{multiplicity}
+                </Badge>
+              )}
+              {multiplicity === 1 && allDone && (
+                <Badge variant="default" className="gap-1 bg-emerald-600">
+                  <Check className="size-3" />
+                  {t("done")}
                 </Badge>
               )}
             </div>
@@ -58,6 +76,40 @@ export function ChoreCard({ chore, onEdit, onDelete }: ChoreCardProps) {
             </Button>
           </div>
         </div>
+
+        {onComplete && onSkip && (
+          <div className="flex gap-2 mt-3 pt-3 border-t">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 h-8 text-xs"
+              disabled={allDone}
+              onClick={() => onSkip(chore.id)}
+            >
+              <SkipForward className="size-3.5" />
+              {t("skip")}
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={allDone}
+              onClick={() => onComplete(chore.id)}
+            >
+              <Check className="size-3.5" />
+              {t("complete")}
+            </Button>
+            {hasDayProgress && onReset && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => onReset(chore.id)}
+              >
+                <RotateCcw className="size-3.5" />
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

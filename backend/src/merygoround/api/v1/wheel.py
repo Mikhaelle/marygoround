@@ -12,17 +12,27 @@ from merygoround.api.dependencies import get_current_user, get_session
 from merygoround.application.wheel.commands import (
     CompleteSpinInput,
     CompleteSpinSessionCommand,
+    QuickCompleteChoreCommand,
+    QuickCompleteChoreInput,
+    QuickSkipChoreCommand,
+    QuickSkipChoreInput,
+    ResetChoreCommand,
+    ResetChoreInput,
+    ResetDailyWheelCommand,
+    ResetDailyWheelInput,
     SkipSpinInput,
     SkipSpinSessionCommand,
     SpinWheelCommand,
     SpinWheelInput,
 )
 from merygoround.application.wheel.dtos import (
+    DailyProgressItem,
     SpinHistoryResponse,
     SpinResultResponse,
     WheelSegmentResponse,
 )
 from merygoround.application.wheel.queries import (
+    GetDailyProgressQuery,
     GetSpinHistoryInput,
     GetSpinHistoryQuery,
     GetWheelSegmentsQuery,
@@ -93,6 +103,98 @@ async def skip_session(
     spin_repo = SqlAlchemySpinSessionRepository(session)
     command = SkipSpinSessionCommand(spin_repo)
     await command.execute(SkipSpinInput(user_id=user_id, session_id=session_id))
+
+
+@router.post("/chores/{chore_id}/complete", status_code=204)
+async def quick_complete_chore(
+    chore_id: uuid.UUID,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> None:
+    """Mark one instance of a chore as completed for today.
+
+    Args:
+        chore_id: The UUID of the chore to complete.
+        user_id: The authenticated user's UUID.
+        session: Database session.
+    """
+    chore_repo = SqlAlchemyChoreRepository(session)
+    spin_repo = SqlAlchemySpinSessionRepository(session)
+    command = QuickCompleteChoreCommand(chore_repo, spin_repo)
+    await command.execute(QuickCompleteChoreInput(user_id=user_id, chore_id=chore_id))
+
+
+@router.post("/chores/{chore_id}/skip", status_code=204)
+async def quick_skip_chore(
+    chore_id: uuid.UUID,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> None:
+    """Mark one instance of a chore as skipped for today.
+
+    Args:
+        chore_id: The UUID of the chore to skip.
+        user_id: The authenticated user's UUID.
+        session: Database session.
+    """
+    chore_repo = SqlAlchemyChoreRepository(session)
+    spin_repo = SqlAlchemySpinSessionRepository(session)
+    command = QuickSkipChoreCommand(chore_repo, spin_repo)
+    await command.execute(QuickSkipChoreInput(user_id=user_id, chore_id=chore_id))
+
+
+@router.delete("/chores/{chore_id}/reset", status_code=204)
+async def reset_chore(
+    chore_id: uuid.UUID,
+    user_id: Annotated[uuid.UUID, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> None:
+    """Reset a specific chore for today by deleting its spin sessions.
+
+    Args:
+        chore_id: The UUID of the chore to reset.
+        user_id: The authenticated user's UUID.
+        session: Database session.
+    """
+    spin_repo = SqlAlchemySpinSessionRepository(session)
+    command = ResetChoreCommand(spin_repo)
+    await command.execute(ResetChoreInput(user_id=user_id, chore_id=chore_id))
+
+
+@router.get("/daily-progress", response_model=list[DailyProgressItem])
+async def get_daily_progress(
+    user_id: Annotated[uuid.UUID, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> list[DailyProgressItem]:
+    """Get daily completion/skip progress for all chores.
+
+    Args:
+        user_id: The authenticated user's UUID.
+        session: Database session.
+
+    Returns:
+        List of DailyProgressItem DTOs.
+    """
+    chore_repo = SqlAlchemyChoreRepository(session)
+    spin_repo = SqlAlchemySpinSessionRepository(session)
+    query = GetDailyProgressQuery(chore_repo, spin_repo)
+    return await query.execute(user_id)
+
+
+@router.delete("/reset-daily", status_code=204)
+async def reset_daily_wheel(
+    user_id: Annotated[uuid.UUID, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> None:
+    """Reset today's wheel by deleting all spin sessions for the current day.
+
+    Args:
+        user_id: The authenticated user's UUID.
+        session: Database session.
+    """
+    spin_repo = SqlAlchemySpinSessionRepository(session)
+    command = ResetDailyWheelCommand(spin_repo)
+    await command.execute(ResetDailyWheelInput(user_id=user_id))
 
 
 @router.get("/history", response_model=SpinHistoryResponse)
